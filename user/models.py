@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
+#from user.models import Manager
 
 # Create your models here.
 class Profile(models.Model):
@@ -13,22 +14,39 @@ class Profile(models.Model):
     
     def __str__(self):
         return self.user.username
+class Manager(models.Model):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(null=True)
+    name = models.CharField(max_length=100)
+    age = models.IntegerField()
+    img = models.ImageField(upload_to='manager_images/')
+    team = models.OneToOneField('Team', on_delete=models.SET_NULL, blank=True, null=True, related_name='manager')
+    NID_number = models.CharField(max_length=100)
+    nationality = models.CharField(max_length=100, null=True)
+    ROLE_CHOICES = [
+        ('manager', 'Manager'),
+    ]
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='manager', editable=False)
+
+    def __str__(self):
+        return self.name
     
 class Team(models.Model):
     team_name = models.CharField(max_length=100, unique=True)
     logo = models.ImageField(upload_to='club_logos/', blank=True, null=True)
     established = models.DateField()
-    created_by = models.ForeignKey(User, related_name='created_teams', on_delete=models.CASCADE,blank=True,null=True)
-
+    manager_name = models.OneToOneField(Manager, related_name='created_teams', on_delete=models.CASCADE,blank=True,null=True)
+    
     def __str__(self):
         return self.team_name
     
-    # def save(self, *args, **kwargs):
-    #     super().save(*args, **kwargs)
-    #     if self.manager:
-    #         manager = self.manager
-    #         manager.team = self
-    #         manager.save()
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.manager:
+            manager = self.manager
+            manager.team = self
+            manager.save()
 
     #     for player in self.players.all():
     #         player.team = self
@@ -84,20 +102,3 @@ class Team(models.Model):
 #     def __str__(self):
 #         return self.player_name
 
-# class Manager(models.Model):
-#     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-#     user = models.OneToOneField(User, on_delete=models.CASCADE)
-#     bio = models.TextField(null=True)
-#     name = models.CharField(max_length=100)
-#     age = models.IntegerField()
-#     img = models.ImageField(upload_to='manager_images/')
-#     team = models.ForeignKey(Team, on_delete=models.SET_NULL, blank=True, null=True, related_name='team_manager')
-#     NID_number = models.CharField(max_length=100)
-#     nationality = models.CharField(max_length=100, null=True)
-#     ROLE_CHOICES = [
-#         ('manager', 'Manager'),
-#     ]
-#     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='manager', editable=False)
-
-#     def __str__(self):
-#         return self.name

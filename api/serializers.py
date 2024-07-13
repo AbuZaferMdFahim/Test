@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from user.models import Profile,Team
+from user.models import Profile,Team,Manager
 from rest_framework.exceptions import ValidationError
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -58,7 +58,40 @@ class UserSerializer(serializers.ModelSerializer):
         return user
     
 
+# class TeamSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Team
+#         fields = ['id', 'team_name', 'logo', 'established', 'created_by']
+
+
+
+class ManagerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Manager
+        fields = '__all__'
+        extra_kwargs = {
+            'img': {'required': False, 'allow_null': True},
+        }
+        read_only_fields = ['user', 'unique_id', 'role']
+
 class TeamSerializer(serializers.ModelSerializer):
+    manager_name = serializers.CharField(write_only=True)
+
     class Meta:
         model = Team
-        fields = ['id', 'team_name', 'logo', 'established', 'created_by']
+        fields = ['team_name', 'logo', 'established', 'manager_name']
+        extra_kwargs = {
+            'logo': {'required': False, 'allow_null': True},
+        }
+
+    def create(self, validated_data):
+        manager_name = validated_data.pop('manager_name')
+        try:
+            manager = Manager.objects.get(name=manager_name)
+        except Manager.DoesNotExist:
+            raise serializers.ValidationError("Manager with this name does not exist")
+        
+        team = Team.objects.create(manager=manager, **validated_data)
+        manager.team = team
+        manager.save()
+        return team

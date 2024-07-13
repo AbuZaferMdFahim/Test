@@ -1,17 +1,25 @@
 # views.py
 from rest_framework import status
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import AllowAny
-from .serializers import UserSerializer,TeamSerializer,ProfileSerializer
-from user.models import Profile
+from .serializers import UserSerializer,TeamSerializer,ProfileSerializer,ManagerSerializer
+from user.models import Profile,Manager,Team
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import authenticate, login
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import viewsets, permissions
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.authtoken.models import Token
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
@@ -97,13 +105,47 @@ class ProfileUpdateDeleteAPIView(APIView):
 
     
 
-class TeamCreateAPIView(APIView):
+# class TeamCreateAPIView(APIView):
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
+
+class TeamCreateView(generics.CreateAPIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+    queryset = Team.objects.all()
+    serializer_class = TeamSerializer
+    
+    
+class ManagerViewSet(viewsets.ModelViewSet):
+    queryset = Manager.objects.all()
+    serializer_class = ManagerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
-    def post(self, request, format=None):
-        serializer = TeamSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(created_by=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        try:
+            print(self.request.FILES)
+            logger.debug(f"Files: {self.request.FILES}")
+            logger.debug(f"Data: {self.request.data}")
+            serializer.save(user=self.request.user)
+        except Exception as e:
+            logger.error(f"Error creating manager: {e}")
+            raise e
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Ensure users can only access their own manager profile
+        return queryset.filter(user=self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.user != self.request.user:
+            raise PermissionDenied("You do not have permission to edit this manager profile.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.user != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this manager profile.")
+        instance.delete()
