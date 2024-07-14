@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from user.models import Profile,Team,Manager
+from user.models import Profile,Team,Manager,Slot
 from rest_framework.exceptions import ValidationError
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -95,3 +95,12 @@ class TeamSerializer(serializers.ModelSerializer):
         manager.team = team
         manager.save()
         return team
+    
+class SlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Slot
+        fields = ['id', 'turf_name', 'time', 'location', 'address', 'team_name_1', 'team_name_2']
+        extra_kwargs = {
+            'team_name_1': {'required': False, 'allow_null': True},
+            'team_name_2': {'required': False, 'allow_null': True},
+        }

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 import uuid
 #from user.models import Manager
 
@@ -21,7 +22,7 @@ class Manager(models.Model):
     name = models.CharField(max_length=100)
     age = models.IntegerField()
     img = models.ImageField(upload_to='manager_images/')
-    team = models.OneToOneField('Team', on_delete=models.SET_NULL, blank=True, null=True, related_name='manager')
+    team = models.OneToOneField('Team', on_delete=models.SET_NULL, blank=True, null=True, related_name='team_manager')
     NID_number = models.CharField(max_length=100)
     nationality = models.CharField(max_length=100, null=True)
     ROLE_CHOICES = [
@@ -36,7 +37,7 @@ class Team(models.Model):
     team_name = models.CharField(max_length=100, unique=True)
     logo = models.ImageField(upload_to='club_logos/', blank=True, null=True)
     established = models.DateField()
-    manager_name = models.OneToOneField(Manager, related_name='created_teams', on_delete=models.CASCADE,blank=True,null=True)
+    manager = models.OneToOneField(Manager, related_name='created_teams', on_delete=models.CASCADE,blank=True,null=True)
     
     def __str__(self):
         return self.team_name
@@ -47,6 +48,27 @@ class Team(models.Model):
             manager = self.manager
             manager.team = self
             manager.save()
+
+# Slot model
+class Slot(models.Model):
+    turf_name = models.CharField(max_length=100, blank=True, null=True)
+    time = models.TimeField(blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    team_name_1 = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='slot_team_1',blank=True,null=True)
+    team_name_2 = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='slot_team_2',blank=True,null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['turf_name', 'time'], name='unique_turf_time')
+        ]
+
+    def clean(self):
+        if self.team_name_1 == self.team_name_2:
+            raise ValidationError("Team_name_1 and Team_name_2 cannot be the same.")
+
+    def __str__(self):
+        return f"{self.turf_name} - {self.time}"
 
     #     for player in self.players.all():
     #         player.team = self

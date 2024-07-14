@@ -6,8 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import AllowAny
-from .serializers import UserSerializer,TeamSerializer,ProfileSerializer,ManagerSerializer
-from user.models import Profile,Manager,Team
+from .serializers import UserSerializer,TeamSerializer,ProfileSerializer,ManagerSerializer,SlotSerializer
+from user.models import Profile,Manager,Team, Slot
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.authentication import TokenAuthentication
@@ -149,3 +149,30 @@ class ManagerViewSet(viewsets.ModelViewSet):
         if instance.user != self.request.user:
             raise PermissionDenied("You do not have permission to delete this manager profile.")
         instance.delete()
+        
+@api_view(['POST'])
+def reserve_slot_api(request):
+    slot_id = request.data.get('slot_id')
+    team_id = request.data.get('team_id')
+
+    try:
+        slot = Slot.objects.get(id=slot_id)
+        team = Team.objects.get(id=team_id)
+
+        if slot.team_name_1 is None:
+            slot.team_name_1 = team
+        elif slot.team_name_2 is None:
+            slot.team_name_2 = team
+        else:
+            return Response({"detail": "Both team slots are already taken."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        slot.save()
+        serializer = SlotSerializer(slot)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Slot.DoesNotExist:
+        return Response({"detail": "Slot does not exist."}, status=status.HTTP_404_NOT_FOUND)
+    except Team.DoesNotExist:
+        return Response({"detail": "Team does not exist."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

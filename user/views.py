@@ -1,12 +1,10 @@
-from django.shortcuts import render
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponseNotAllowed
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import update_session_auth_hash
+from .models import Slot,Team,Manager,Profile
 
 # Create your views here.
 def signup(request):
@@ -78,3 +76,37 @@ def logout_view(request):
         return redirect('login') 
     else:
         return HttpResponseNotAllowed(['POST'])
+    
+def reserve_slot(request):
+    if request.method == 'POST':
+        slot_id = request.POST.get('slot_id')
+        team_id = request.POST.get('team_id')
+        
+        try:
+            slot = Slot.objects.get(id=slot_id)
+            team = Team.objects.get(id=team_id)
+            
+            if slot.team_name_1 is None:
+                slot.team_name_1 = team
+            elif slot.team_name_2 is None:
+                slot.team_name_2 = team
+            else:
+                # Both teams are already chosen for this slot
+                # Handle this case as per your application's logic
+                pass
+            
+            slot.save()
+            return redirect('slot_detail', slot_id=slot.id)
+        
+        except Slot.DoesNotExist or Team.DoesNotExist:
+            # Handle the case where slot or team does not exist
+            pass
+        
+    # Render your template with the form
+    slots = Slot.objects.all()
+    teams = Team.objects.all()
+    context = {
+        'slots': slots,
+        'teams': teams,
+    }
+    return render(request, 'reserve_slot.html', context)

@@ -2,7 +2,7 @@
 from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import signup,login_view ,TeamCreateView,ProfileCreateAPIView,ProfileUpdateDeleteAPIView
+from .views import signup,login_view ,TeamCreateView,ProfileCreateAPIView,ProfileUpdateDeleteAPIView,reserve_slot_api
 from rest_framework.routers import DefaultRouter
 from .views import ManagerViewSet
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('profile_update/', ProfileUpdateDeleteAPIView.as_view(), name='profile-update-delete'),
     path('teamCreate/', TeamCreateView.as_view(), name='team-create'),
     path('', include(router.urls)),
+    path('api/reserve_slot/', reserve_slot_api, name='reserve_slot_api'),
 
 ]
 
