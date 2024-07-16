@@ -1,13 +1,14 @@
 # views.py
 from rest_framework import status
+from django.db import models
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import AllowAny
-from .serializers import UserSerializer,TeamSerializer,ProfileSerializer,ManagerSerializer,SlotSerializer
-from user.models import Profile,Manager,Team, Slot
+from .serializers import UserSerializer,TeamSerializer,ProfileSerializer,ManagerSerializer,SlotSerializer,ReserveSlotSerializer,FixtureSerializer
+from user.models import Profile,Manager,Team, Slot,Reserve_slot,Fixture
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.authentication import TokenAuthentication
@@ -150,29 +151,34 @@ class ManagerViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have permission to delete this manager profile.")
         instance.delete()
         
-@api_view(['POST'])
-def reserve_slot_api(request):
-    slot_id = request.data.get('slot_id')
-    team_id = request.data.get('team_id')
+class SlotViewSet(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Slot.objects.all()
+    serializer_class = SlotSerializer
+    
 
-    try:
-        slot = Slot.objects.get(id=slot_id)
-        team = Team.objects.get(id=team_id)
+#fixture 
 
-        if slot.team_name_1 is None:
-            slot.team_name_1 = team
-        elif slot.team_name_2 is None:
-            slot.team_name_2 = team
-        else:
-            return Response({"detail": "Both team slots are already taken."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        slot.save()
-        serializer = SlotSerializer(slot)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+class ReserveSlotViewSet(viewsets.ModelViewSet):
+    queryset = Reserve_slot.objects.all()
+    serializer_class = ReserveSlotSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-    except Slot.DoesNotExist:
-        return Response({"detail": "Slot does not exist."}, status=status.HTTP_404_NOT_FOUND)
-    except Team.DoesNotExist:
-        return Response({"detail": "Team does not exist."}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        # Filter queryset based on the request user's manager team
+        return self.queryset.filter(team=self.request.user.manager.team)
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+class FixtureViewSet(viewsets.ModelViewSet):
+    queryset = Fixture.objects.all()
+    serializer_class = FixtureSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Filter queryset based on the request user's manager team
+        return self.queryset.filter(
+                models.Q(team_1__team_name=self.request.user.manager.team) |
+                models.Q(team_2__team_name=self.request.user.manager.team)
+            )

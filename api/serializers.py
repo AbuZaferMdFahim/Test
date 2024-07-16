@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from user.models import Profile,Team,Manager,Slot
+from user.models import Profile,Team,Manager,Slot,Reserve_slot,Fixture
 from rest_framework.exceptions import ValidationError
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -57,14 +57,6 @@ class UserSerializer(serializers.ModelSerializer):
 
         return user
     
-
-# class TeamSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Team
-#         fields = ['id', 'team_name', 'logo', 'established', 'created_by']
-
-
-
 class ManagerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manager
@@ -95,12 +87,59 @@ class TeamSerializer(serializers.ModelSerializer):
         manager.team = team
         manager.save()
         return team
-    
+
 class SlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = Slot
-        fields = ['id', 'turf_name', 'time', 'location', 'address', 'team_name_1', 'team_name_2']
-        extra_kwargs = {
-            'team_name_1': {'required': False, 'allow_null': True},
-            'team_name_2': {'required': False, 'allow_null': True},
-        }
+        fields = '__all__'
+        
+class ReserveSlotSerializer(serializers.ModelSerializer):
+    team_name = serializers.CharField(source='team.team_name', read_only=True)
+    manager_name = serializers.CharField(source='manager_name.name', read_only=True)
+    turf_name = serializers.CharField(source='slot.turf_name', read_only=True)
+    time = serializers.TimeField(source='slot.time', read_only=True)
+    location = serializers.CharField(source='slot.location', read_only=True)
+    address = serializers.CharField(source='slot.address', read_only=True)
+
+    class Meta:
+        model = Reserve_slot
+        fields = ['team_name', 'turf_name', 'time', 'location', 'address', 'manager_name', ]
+
+    def create(self, validated_data):
+        # Assuming 'team' and 'slot' are required fields in the serializer
+        validated_data['team'] = self.context['request'].user.manager.team
+        validated_data['manager_name'] = self.context['request'].user.manager
+        reserve_slot = Reserve_slot.objects.create(**validated_data)
+        return reserve_slot
+        
+class FixtureSerializer(serializers.ModelSerializer):
+    team_1_name = serializers.CharField(source='team_1.team_name', read_only=True)
+    team_2_name = serializers.CharField(source='team_2.team_name', read_only=True)
+    turf_name = serializers.CharField(source='slot.turf_name', read_only=True)
+    time = serializers.TimeField(source='slot.time', read_only=True)
+    location = serializers.CharField(source='slot.location', read_only=True)
+    address = serializers.CharField(source='slot.address', read_only=True)
+
+    class Meta:
+        model = Fixture
+        fields = ['team_1_name','team_2_name', 'turf_name', 'time', 'location', 'address']     
+        
+# class FixtureSerializer(serializers.ModelSerializer):
+#     slot_location = serializers.CharField(source='slot.location')
+#     slot_time = serializers.TimeField(source='slot.time')
+#     slot_area = serializers.CharField(source='slot.address')
+#     slot_turf_name = serializers.CharField(source='slot.turf_name')
+
+#     class Meta:
+#         model = Fixture
+#         fields = ['id', 'team_name_1', 'team_name_2', 'slot_location', 'slot_time', 'slot_area', 'slot_turf_name']
+  
+    
+# class SlotSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Slot
+#         fields = ['id', 'turf_name', 'time', 'location', 'address', 'team_name_1', 'team_name_2']
+#         extra_kwargs = {
+#             'team_name_1': {'required': False, 'allow_null': True},
+#             'team_name_2': {'required': False, 'allow_null': True},
+#         }

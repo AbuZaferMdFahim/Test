@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import uuid
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 #from user.models import Manager
 
 # Create your models here.
@@ -55,20 +57,52 @@ class Slot(models.Model):
     time = models.TimeField(blank=True, null=True)
     location = models.CharField(max_length=100, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
-    team_name_1 = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='slot_team_1',blank=True,null=True)
-    team_name_2 = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='slot_team_2',blank=True,null=True)
+    available = models.BooleanField(default=True)  # Add this field
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['turf_name', 'time'], name='unique_turf_time')
         ]
 
-    def clean(self):
-        if self.team_name_1 == self.team_name_2:
-            raise ValidationError("Team_name_1 and Team_name_2 cannot be the same.")
+    def __str__(self):
+        return f"{self.turf_name} ({self.location}, {self.address}) - {self.time}"
+
+class Reserve_slot(models.Model):
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    slot = models.ForeignKey(Slot, on_delete=models.CASCADE)
+    manager_name = models.ForeignKey('Manager', on_delete=models.CASCADE)
+    chosen_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['team', 'slot'], name='unique_team_slot')
+        ]
 
     def __str__(self):
-        return f"{self.turf_name} - {self.time}"
+        return f"{self.team.team_name} - {self.slot}"
+
+    def clean(self):
+        if not self.slot.available:
+            raise ValidationError("This slot is already reserved and not available.")
+
+class Fixture(models.Model):
+    team_1 = models.ForeignKey(Team, related_name='team_1', on_delete=models.CASCADE)
+    team_2 = models.ForeignKey(Team, related_name='team_2', on_delete=models.CASCADE)
+    slot = models.ForeignKey(Slot, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.team_1.team_name} vs {self.team_2.team_name} - {self.slot}"
+
+    def save(self, *args, **kwargs):
+        # Mark the slot as unavailable when creating the fixture
+        self.slot.available = False
+        self.slot.save()
+        super().save(*args, **kwargs)
+
+
+
+    
+
 
     #     for player in self.players.all():
     #         player.team = self
