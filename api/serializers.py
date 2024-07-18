@@ -97,13 +97,14 @@ class ReserveSlotSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source='team.team_name', read_only=True)
     manager_name = serializers.CharField(source='manager_name.name', read_only=True)
     turf_name = serializers.CharField(source='slot.turf_name', read_only=True)
+    date = serializers.DateField(source='slot.date', read_only=True)
     time = serializers.TimeField(source='slot.time', read_only=True)
     location = serializers.CharField(source='slot.location', read_only=True)
     address = serializers.CharField(source='slot.address', read_only=True)
 
     class Meta:
         model = Reserve_slot
-        fields = ['team_name', 'turf_name', 'time', 'location', 'address', 'manager_name', ]
+        fields = ['team_name', 'turf_name', 'date', 'time', 'location', 'address', 'manager_name', ]
 
     def create(self, validated_data):
         # Assuming 'team' and 'slot' are required fields in the serializer
@@ -116,13 +117,14 @@ class FixtureSerializer(serializers.ModelSerializer):
     team_1_name = serializers.CharField(source='team_1.team_name', read_only=True)
     team_2_name = serializers.CharField(source='team_2.team_name', read_only=True)
     turf_name = serializers.CharField(source='slot.turf_name', read_only=True)
+    date = serializers.DateField(source='slot.date', read_only=True)
     time = serializers.TimeField(source='slot.time', read_only=True)
     location = serializers.CharField(source='slot.location', read_only=True)
     address = serializers.CharField(source='slot.address', read_only=True)
 
     class Meta:
         model = Fixture
-        fields = ['team_1_name','team_2_name', 'turf_name', 'time', 'location', 'address']     
+        fields = ['team_1_name','team_2_name', 'turf_name', 'date', 'time', 'location', 'address']     
         
 # class FixtureSerializer(serializers.ModelSerializer):
 #     slot_location = serializers.CharField(source='slot.location')

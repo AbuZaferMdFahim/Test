@@ -42,7 +42,22 @@ INSTALLED_APPS = [
     'user.apps.UserConfig',
     'api',
     'rest_framework.authtoken',
+    'django_crontab',
 ]
+# CRONJOBS = [
+#     ('0 0 * * *', 'django.core.management.call_command', ['delete_past_slots']),
+# ]
+# your_project/settings.py
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+CELERY_BEAT_SCHEDULE = {
+    'delete-past-slots-every-day': {
+        'task': 'your_app.tasks.delete_past_slots',
+        'schedule': 86400.0,  # 24 hours in seconds
+    },
+}
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

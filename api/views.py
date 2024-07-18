@@ -1,5 +1,5 @@
-# views.py
 from rest_framework import status
+from django.utils import timezone
 from django.db import models
 from rest_framework import generics
 from rest_framework.views import APIView
@@ -151,18 +151,24 @@ class ManagerViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have permission to delete this manager profile.")
         instance.delete()
         
+
+
 class SlotViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Slot.objects.all()
+    queryset = Slot.objects.filter(date__gte=timezone.now().date(), time__gte=timezone.now().time())
     serializer_class = SlotSerializer
+
     
 
 #fixture 
-
 class ReserveSlotViewSet(viewsets.ModelViewSet):
-    queryset = Reserve_slot.objects.all()
+    queryset = Reserve_slot.objects.filter(slot__date__gte=timezone.now().date(), slot__time__gte=timezone.now().time())
     serializer_class = ReserveSlotSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(team=self.request.user.manager.team)
+
 
     def get_queryset(self):
         # Filter queryset based on the request user's manager team
@@ -172,7 +178,7 @@ class ReserveSlotViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 class FixtureViewSet(viewsets.ModelViewSet):
-    queryset = Fixture.objects.all()
+    queryset = Fixture.objects.filter(slot__date__gte=timezone.now().date(), slot__time__gte=timezone.now().time())
     serializer_class = FixtureSerializer
     permission_classes = [permissions.IsAuthenticated]
 

@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import uuid
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.utils import timezone
 #from user.models import Manager
 
 # Create your models here.
@@ -54,6 +54,7 @@ class Team(models.Model):
 # Slot model
 class Slot(models.Model):
     turf_name = models.CharField(max_length=100, blank=True, null=True)
+    date = models.DateField(blank=True,null=True)
     time = models.TimeField(blank=True, null=True)
     location = models.CharField(max_length=100, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
@@ -61,11 +62,12 @@ class Slot(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['turf_name', 'time'], name='unique_turf_time')
+            models.UniqueConstraint(fields=['turf_name', 'date', 'time'], name='unique_turf_date_time')
         ]
 
     def __str__(self):
-        return f"{self.turf_name} ({self.location}, {self.address}) - {self.time}"
+        return f"{self.turf_name} ({self.location}, {self.address}) - {self.date} - {self.time}"
+    
 
 class Reserve_slot(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
